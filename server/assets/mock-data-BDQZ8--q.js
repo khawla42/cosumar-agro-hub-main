@@ -1,0 +1,33 @@
+const PRODUCTION_DATA = [
+  { month: "Jan", cultivated: 120, harvested: 95 },
+  { month: "Fév", cultivated: 135, harvested: 110 },
+  { month: "Mar", cultivated: 150, harvested: 125 },
+  { month: "Avr", cultivated: 170, harvested: 145 },
+  { month: "Mai", cultivated: 160, harvested: 140 },
+  { month: "Jun", cultivated: 180, harvested: 160 }
+];
+const EMPLOYEES = [
+  { id: "1", name: "Karim Tazi", role: "admin", email: "karim@cosumar.ma", department: "Direction", performance: 95, status: "Actif" },
+  { id: "2", name: "Nadia Lahlou", role: "manager", email: "nadia@cosumar.ma", department: "Production", performance: 88, status: "Actif" },
+  { id: "3", name: "Rachid Benali", role: "opérateur", email: "rachid@cosumar.ma", department: "Logistique", performance: 75, status: "Congé" },
+  { id: "4", name: "Amina Chraibi", role: "manager", email: "amina@cosumar.ma", department: "Finances", performance: 92, status: "Actif" },
+  { id: "5", name: "Yassine Daoudi", role: "opérateur", email: "yassine@cosumar.ma", department: "Production", performance: 80, status: "Actif" }
+];
+const DELIVERIES = [
+  { id: "LIV-101", driverName: "Said El Mansouri", vehicle: "Camion A1", origin: "Gharb", destination: "Usine Centrale", status: "En cours", eta: "14:30" },
+  { id: "LIV-102", driverName: "Brahim Fassi", vehicle: "Camion B3", origin: "Doukkala", destination: "Usine Sud", status: "Livré", eta: "10:15" },
+  { id: "LIV-103", driverName: "Mustapha Tazi", vehicle: "Fourgon C2", origin: "Loukkos", destination: "Dépôt Nord", status: "Retard", eta: "16:00" },
+  { id: "LIV-104", driverName: "Kamal Idrissi", vehicle: "Camion A2", origin: "Tadla", destination: "Usine Centrale", status: "En cours", eta: "15:45" }
+];
+const PRODUCTION_ORDERS = [
+  { id: "ORD-501", product: "Sucre Blanc", quantity: 5e3, startDate: "2026-05-01", status: "En cours", progress: 65 },
+  { id: "ORD-502", product: "Sucre Brut", quantity: 3e3, startDate: "2026-04-25", status: "Terminé", progress: 100 },
+  { id: "ORD-503", product: "Mélasse", quantity: 1500, startDate: "2026-05-04", status: "En attente", progress: 0 },
+  { id: "ORD-504", product: "Sucre Blanc", quantity: 4500, startDate: "2026-05-02", status: "En cours", progress: 30 }
+];
+export {
+  DELIVERIES as D,
+  EMPLOYEES as E,
+  PRODUCTION_DATA as P,
+  PRODUCTION_ORDERS as a
+};
