@@ -1,6 +1,7 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { AuthProvider } from "@/lib/auth-context";
 import { Toaster } from "sonner";
+import { useSocket } from "@/hooks/use-socket";
 
 import appCss from "../styles.css?url";
 
@@ -69,8 +70,14 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   return (
     <AuthProvider>
+      <SocketHandler />
       <Outlet />
       <Toaster position="top-right" expand={false} richColors />
     </AuthProvider>
   );
+}
+
+function SocketHandler() {
+  useSocket();
+  return null;
 }

@@ -1,24 +1,72 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { Header } from "@/components/Header";
-import { Sprout, BarChart3, Users, Truck, ArrowRight, Mail, Phone, MapPin } from "lucide-react";
+import {
+  Sprout,
+  BarChart3,
+  Users,
+  Truck,
+  ArrowRight,
+  Mail,
+  Phone,
+  MapPin,
+  Loader2,
+} from "lucide-react";
 import heroImage from "@/assets/hero-agriculture.jpg";
 import techImage from "@/assets/tech-agriculture.png";
 import sugarFactoryImage from "@/assets/sugar-factory.png";
 import sugarProductImage from "@/assets/sugar-product.png";
 import farmerImage from "@/assets/farmer-field.png";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "COSUMAR — Gestion Agricole Moderne" },
-      { name: "description", content: "Plateforme de gestion agricole pour la filière sucrière au Maroc" },
+      {
+        name: "description",
+        content: "Plateforme de gestion agricole pour la filière sucrière au Maroc",
+      },
     ],
   }),
   component: Index,
 });
 
 function Index() {
+  const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name || !form.email || !form.subject || !form.message) {
+      toast.error("Veuillez remplir tous les champs");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const hostname = typeof window !== "undefined" ? window.location.hostname : "localhost";
+      const response = await fetch(`http://${hostname}:5000/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      if (response.ok) {
+        toast.success("Message envoyé avec succès !");
+        setForm({ name: "", email: "", subject: "", message: "" });
+      } else {
+        toast.error("Une erreur est survenue lors de l'envoi");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Erreur réseau");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -26,7 +74,13 @@ function Index() {
       {/* Hero */}
       <section className="relative min-h-[90vh] flex items-center pt-16">
         <div className="absolute inset-0">
-          <img src={heroImage} alt="Champs de betterave" className="w-full h-full object-cover" width={1920} height={1080} />
+          <img
+            src={heroImage}
+            alt="Champs de betterave"
+            className="w-full h-full object-cover"
+            width={1920}
+            height={1080}
+          />
           <div className="absolute inset-0 bg-gradient-to-r from-foreground/80 via-foreground/50 to-transparent" />
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -38,7 +92,8 @@ function Index() {
               Gestion Agricole <span className="text-gold">Intelligente</span>
             </h1>
             <p className="mt-6 text-lg text-primary-foreground/80 max-w-lg leading-relaxed">
-              Une plateforme moderne pour gérer vos cultures, suivre votre production et optimiser vos rendements avec COSUMAR.
+              Une plateforme moderne pour gérer vos cultures, suivre votre production et optimiser
+              vos rendements avec COSUMAR.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               <Link
@@ -67,7 +122,9 @@ function Index() {
                 À propos de <span className="text-primary">COSUMAR</span>
               </h2>
               <p className="mt-6 text-lg text-muted-foreground leading-relaxed">
-                COSUMAR est le leader de la filière sucrière au Maroc, engagé dans le développement agricole durable et l'accompagnement des agriculteurs à travers des solutions innovantes.
+                COSUMAR est le leader de la filière sucrière au Maroc, engagé dans le développement
+                agricole durable et l'accompagnement des agriculteurs à travers des solutions
+                innovantes.
               </p>
               <div className="grid sm:grid-cols-2 gap-6 mt-8">
                 {[
@@ -76,17 +133,28 @@ function Index() {
                   { num: "6", label: "Régions couvertes" },
                   { num: "100%", label: "Engagement qualité" },
                 ].map((stat) => (
-                  <div key={stat.label} className="p-6 rounded-2xl bg-card border border-border hover:shadow-md transition-shadow">
+                  <div
+                    key={stat.label}
+                    className="p-6 rounded-2xl bg-card border border-border hover:shadow-md transition-shadow"
+                  >
                     <div className="text-3xl font-bold text-primary font-heading">{stat.num}</div>
-                    <div className="mt-1 text-sm font-medium text-muted-foreground">{stat.label}</div>
+                    <div className="mt-1 text-sm font-medium text-muted-foreground">
+                      {stat.label}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
             <div className="relative rounded-3xl overflow-hidden shadow-2xl h-[500px]">
-              <img src={techImage} alt="Agriculture moderne" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700" />
+              <img
+                src={techImage}
+                alt="Agriculture moderne"
+                className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-8">
-                <p className="text-white font-medium text-xl max-w-sm">L'innovation technologique au service de l'agriculture marocaine.</p>
+                <p className="text-white font-medium text-xl max-w-sm">
+                  L'innovation technologique au service de l'agriculture marocaine.
+                </p>
               </div>
             </div>
           </div>
@@ -97,17 +165,40 @@ function Index() {
       <section id="services" className="py-20 bg-muted/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="font-heading text-3xl sm:text-4xl font-bold text-foreground">Nos Services</h2>
-            <p className="mt-4 text-muted-foreground">Des outils modernes pour une agriculture performante</p>
+            <h2 className="font-heading text-3xl sm:text-4xl font-bold text-foreground">
+              Nos Services
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              Des outils modernes pour une agriculture performante
+            </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { icon: Sprout, title: "Suivi Cultural", desc: "Gérez vos cultures et suivez l'évolution de vos plantations en temps réel." },
-              { icon: BarChart3, title: "Analyse Production", desc: "Tableaux de bord analytiques pour optimiser vos rendements agricoles." },
-              { icon: Users, title: "Gestion Agriculteurs", desc: "Plateforme de collaboration entre agriculteurs et équipes COSUMAR." },
-              { icon: Truck, title: "Suivi Livraisons", desc: "Traçabilité complète de la récolte jusqu'à la livraison en usine." },
+              {
+                icon: Sprout,
+                title: "Suivi Cultural",
+                desc: "Gérez vos cultures et suivez l'évolution de vos plantations en temps réel.",
+              },
+              {
+                icon: BarChart3,
+                title: "Analyse Production",
+                desc: "Tableaux de bord analytiques pour optimiser vos rendements agricoles.",
+              },
+              {
+                icon: Users,
+                title: "Gestion Agriculteurs",
+                desc: "Plateforme de collaboration entre agriculteurs et équipes COSUMAR.",
+              },
+              {
+                icon: Truck,
+                title: "Suivi Livraisons",
+                desc: "Traçabilité complète de la récolte jusqu'à la livraison en usine.",
+              },
             ].map((service) => (
-              <div key={service.title} className="p-6 rounded-2xl bg-card border border-border hover:shadow-lg hover:-translate-y-1 transition-all group">
+              <div
+                key={service.title}
+                className="p-6 rounded-2xl bg-card border border-border hover:shadow-lg hover:-translate-y-1 transition-all group"
+              >
                 <div className="p-3 rounded-xl bg-primary/10 w-fit group-hover:bg-primary/20 transition-colors">
                   <service.icon className="h-6 w-6 text-primary" />
                 </div>
@@ -123,25 +214,43 @@ function Index() {
       <section className="py-20 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="font-heading text-3xl sm:text-4xl font-bold text-foreground">Transformation & Production</h2>
-            <p className="mt-4 text-muted-foreground">De la récolte au produit final, un processus de haute qualité</p>
+            <h2 className="font-heading text-3xl sm:text-4xl font-bold text-foreground">
+              Transformation & Production
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              De la récolte au produit final, un processus de haute qualité
+            </p>
           </div>
           <div className="grid md:grid-cols-2 gap-8">
             <div className="rounded-3xl overflow-hidden shadow-xl group relative h-[400px]">
-              <img src={sugarFactoryImage} alt="Usine COSUMAR" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+              <img
+                src={sugarFactoryImage}
+                alt="Usine COSUMAR"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-8">
                 <div>
                   <h3 className="text-white font-bold text-2xl mb-2">Installations Modernes</h3>
-                  <p className="text-white/80">Des usines à la pointe de la technologie pour garantir une extraction optimale et durable.</p>
+                  <p className="text-white/80">
+                    Des usines à la pointe de la technologie pour garantir une extraction optimale
+                    et durable.
+                  </p>
                 </div>
               </div>
             </div>
             <div className="rounded-3xl overflow-hidden shadow-xl group relative h-[400px]">
-              <img src={sugarProductImage} alt="Produit fini COSUMAR" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+              <img
+                src={sugarProductImage}
+                alt="Produit fini COSUMAR"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-8">
                 <div>
                   <h3 className="text-white font-bold text-2xl mb-2">Un Sucre de Qualité</h3>
-                  <p className="text-white/80">Un produit pur, conçu dans le respect des normes internationales les plus strictes.</p>
+                  <p className="text-white/80">
+                    Un produit pur, conçu dans le respect des normes internationales les plus
+                    strictes.
+                  </p>
                 </div>
               </div>
             </div>
@@ -153,39 +262,65 @@ function Index() {
       <section className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="font-heading text-3xl sm:text-4xl font-bold text-foreground">Notre Quotidien en Images</h2>
-            <p className="mt-4 text-muted-foreground">Découvrez l'univers COSUMAR, des champs jusqu'à l'usine</p>
+            <h2 className="font-heading text-3xl sm:text-4xl font-bold text-foreground">
+              Notre Quotidien en Images
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              Découvrez l'univers COSUMAR, des champs jusqu'à l'usine
+            </p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="col-span-2 row-span-2 rounded-2xl overflow-hidden shadow-lg group relative min-h-[400px]">
-              <img src={heroImage} alt="Champs" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+              <img
+                src={heroImage}
+                alt="Champs"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <div>
                   <h3 className="text-white font-bold text-xl mb-1">Nos Terres Agricoles</h3>
-                  <p className="text-white/80 text-sm">Une culture responsable et respectueuse de l'environnement.</p>
+                  <p className="text-white/80 text-sm">
+                    Une culture responsable et respectueuse de l'environnement.
+                  </p>
                 </div>
               </div>
             </div>
             <div className="rounded-2xl overflow-hidden shadow-lg group relative h-48 md:h-64">
-              <img src={techImage} alt="Technologie" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+              <img
+                src={techImage}
+                alt="Technologie"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <p className="text-white font-semibold text-sm">Agriculture Connectée</p>
               </div>
             </div>
             <div className="rounded-2xl overflow-hidden shadow-lg group relative h-48 md:h-64">
-              <img src={sugarProductImage} alt="Sucre pur" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+              <img
+                src={sugarProductImage}
+                alt="Sucre pur"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <p className="text-white font-semibold text-sm">Qualité Premium</p>
               </div>
             </div>
             <div className="rounded-2xl overflow-hidden shadow-lg group relative h-48 md:h-64">
-              <img src={farmerImage} alt="Agriculteur COSUMAR" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+              <img
+                src={farmerImage}
+                alt="Agriculteur COSUMAR"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <p className="text-white font-semibold text-sm">Soutien aux Agriculteurs</p>
               </div>
             </div>
             <div className="rounded-2xl overflow-hidden shadow-lg group relative h-48 md:h-64">
-              <img src={sugarFactoryImage} alt="Usine" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+              <img
+                src={sugarFactoryImage}
+                alt="Usine"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <p className="text-white font-semibold text-sm">Excellence Industrielle</p>
               </div>
@@ -200,7 +335,9 @@ function Index() {
           <div className="grid md:grid-cols-2 gap-12">
             <div>
               <h2 className="font-heading text-3xl font-bold text-foreground">Contactez-nous</h2>
-              <p className="mt-4 text-muted-foreground">Notre équipe est à votre disposition pour répondre à toutes vos questions.</p>
+              <p className="mt-4 text-muted-foreground">
+                Notre équipe est à votre disposition pour répondre à toutes vos questions.
+              </p>
               <div className="mt-8 space-y-4">
                 {[
                   { icon: MapPin, text: "8, Rue El Mouatamid Ibnou Abbad, Casablanca" },
@@ -215,17 +352,50 @@ function Index() {
               </div>
             </div>
             <div className="bg-card rounded-2xl border border-border p-8">
-              <div className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <input type="text" placeholder="Nom" className="w-full px-4 py-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
-                  <input type="email" placeholder="Email" className="w-full px-4 py-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                  <input
+                    type="text"
+                    placeholder="Nom"
+                    required
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    className="w-full px-4 py-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    required
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    className="w-full px-4 py-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
                 </div>
-                <input type="text" placeholder="Sujet" className="w-full px-4 py-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
-                <textarea rows={4} placeholder="Votre message" className="w-full px-4 py-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none" />
-                <button className="w-full rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
+                <input
+                  type="text"
+                  placeholder="Sujet"
+                  required
+                  value={form.subject}
+                  onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                  className="w-full px-4 py-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                <textarea
+                  rows={4}
+                  placeholder="Votre message"
+                  required
+                  value={form.message}
+                  onChange={(e) => setForm({ ...form, message: e.target.value })}
+                  className="w-full px-4 py-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                />
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                   Envoyer le message
                 </button>
-              </div>
+              </form>
             </div>
           </div>
         </div>

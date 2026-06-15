@@ -2,8 +2,28 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { StatCard } from "@/components/StatCard";
-import { Users, BarChart3, CreditCard, Truck, Search, Loader2, Activity, Clock } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import {
+  Users,
+  BarChart3,
+  CreditCard,
+  Truck,
+  Search,
+  Loader2,
+  Activity,
+  Clock,
+} from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 
 export const Route = createFileRoute("/employe/")({
   head: () => ({ meta: [{ title: "Tableau de Bord — Employé COSUMAR" }] }),
@@ -25,25 +45,18 @@ function EmployeDashboardIndex() {
     const fetchData = async () => {
       try {
         const [farmersRes, statsRes] = await Promise.all([
-          apiFetch('/farmers'),
-          apiFetch('/dashboard-stats')
+          apiFetch("/farmers"),
+          apiFetch("/dashboard-stats"),
         ]);
 
         const farmersList = await farmersRes.json();
         const dashboardStats = await statsRes.json();
 
-        setFarmers(farmersList);
+        setFarmers(Array.isArray(farmersList) ? farmersList : []);
         setStats(dashboardStats);
-        
-        // Mocking chart data based on real data trends
-        setProductionData([
-          { month: "Jan", cultivated: 120, harvested: 95 },
-          { month: "Fév", cultivated: 135, harvested: 110 },
-          { month: "Mar", cultivated: 150, harvested: 125 },
-          { month: "Avr", cultivated: 170, harvested: 145 },
-          { month: "Mai", cultivated: 160, harvested: 140 },
-          { month: "Juin", cultivated: 180, harvested: 160 },
-        ]);
+        setProductionData(
+          Array.isArray(dashboardStats?.productionChart) ? dashboardStats.productionChart : [],
+        );
 
         setQualityData([
           { name: "Excellente", value: 35, fill: "oklch(0.45 0.12 150)" },
@@ -55,14 +68,16 @@ function EmployeDashboardIndex() {
         setLoading(false);
       } catch (err) {
         console.error("Failed to fetch dashboard data:", err);
+        setFarmers([]);
+        setProductionData([]);
         setLoading(false);
       }
     };
     fetchData();
   }, [apiFetch]);
 
-  const regions = [...new Set(farmers.map((f) => f.region))];
-  const filtered = farmers.filter((f) => {
+  const regions = [...new Set((Array.isArray(farmers) ? farmers : []).map((f) => f.region))];
+  const filtered = (Array.isArray(farmers) ? farmers : []).filter((f) => {
     if (search && !f.name?.toLowerCase().includes(search.toLowerCase())) return false;
     if (filterRegion !== "all" && f.region !== filterRegion) return false;
     return true;
@@ -76,22 +91,51 @@ function EmployeDashboardIndex() {
     );
   }
 
-  const totalCultivated = farmers.reduce((acc, f) => acc + (f.cultivatedQty || 0), 0).toFixed(1);
-  const paidCount = farmers.filter((f) => f.paymentStatus === "Payé").length;
-  const deliveredCount = farmers.filter((f) => f.deliveryStatus === "Livré").length;
+  const farmersSafe = Array.isArray(farmers) ? farmers : [];
+  // Utiliser les stats globales du backend si disponibles, sinon calculer à partir de la liste
+  const totalCultivated =
+    stats?.totalCultivated || farmersSafe.reduce((acc, f) => acc + (f.cultivatedQty || 0), 0);
+
+  const formatNum = (val: any) => {
+    return (Number(val) || 0).toLocaleString("fr-FR", {
+      maximumFractionDigits: 1,
+    });
+  };
+
+  const paidCount =
+    stats?.totalPaid !== undefined
+      ? stats.totalPaid
+      : farmersSafe.filter((f) => f.paymentStatus === "Payé").length;
+  const deliveredCount =
+    stats?.deliveredCount !== undefined
+      ? stats.deliveredCount
+      : farmersSafe.filter((f) => f.deliveryStatus === "Livré").length;
+  const totalDeliveries =
+    stats?.totalDeliveries !== undefined ? stats.totalDeliveries : farmersSafe.length;
 
   return (
     <>
       <div className="mb-8 animate-fade-in-up">
         <h1 className="text-2xl font-bold text-foreground">Tableau de bord — Employé</h1>
-        <p className="text-muted-foreground mt-1 text-sm">Suivi des agriculteurs et des activités en temps réel</p>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Suivi des agriculteurs et des activités en temps réel
+        </p>
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard title="Agriculteurs" value={farmers.length} icon={Users} trend={{ value: 5, label: "ce mois" }} />
-        <StatCard title="Total Cultivé" value={`${totalCultivated} ha`} icon={BarChart3} />
-        <StatCard title="Paiements Effectués" value={`${paidCount}/${farmers.length}`} icon={CreditCard} />
-        <StatCard title="Livraisons" value={`${deliveredCount}/${farmers.length}`} icon={Truck} />
+        <StatCard
+          title="Agriculteurs"
+          value={stats?.totalFarmers || farmersSafe.length}
+          icon={Users}
+          trend={{ value: 5, label: "ce mois" }}
+        />
+        <StatCard title="Total Cultivé" value={`${formatNum(totalCultivated)} ha`} icon={BarChart3} />
+        <StatCard
+          title="Paiements Effectués"
+          value={`${paidCount > 0 ? paidCount.toLocaleString() : "0"} MAD`}
+          icon={CreditCard}
+        />
+        <StatCard title="Livraisons" value={`${deliveredCount}/${totalDeliveries}`} icon={Truck} />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6 mb-8">
@@ -112,9 +156,21 @@ function EmployeDashboardIndex() {
               <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 100)" vertical={false} />
               <XAxis dataKey="month" fontSize={12} axisLine={false} tickLine={false} />
               <YAxis fontSize={12} axisLine={false} tickLine={false} />
-              <Tooltip cursor={{fill: 'oklch(0.95 0.01 100)'}} />
-              <Bar dataKey="cultivated" fill="oklch(0.45 0.12 150)" radius={[4, 4, 0, 0]} name="Cultivé" barSize={30} />
-              <Bar dataKey="harvested" fill="oklch(0.65 0.15 85)" radius={[4, 4, 0, 0]} name="Récolté" barSize={30} />
+              <Tooltip cursor={{ fill: "oklch(0.95 0.01 100)" }} />
+              <Bar
+                dataKey="cultivated"
+                fill="oklch(0.45 0.12 150)"
+                radius={[4, 4, 0, 0]}
+                name="Cultivé"
+                barSize={30}
+              />
+              <Bar
+                dataKey="harvested"
+                fill="oklch(0.65 0.15 85)"
+                radius={[4, 4, 0, 0]}
+                name="Récolté"
+                barSize={30}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -126,16 +182,26 @@ function EmployeDashboardIndex() {
           </h3>
           <div className="space-y-4 max-h-[250px] overflow-y-auto pr-2 scrollbar-thin">
             {stats?.recentLogs?.map((log: any) => (
-              <div key={log.id} className="flex gap-3 items-start p-2 rounded-lg hover:bg-muted/50 transition-colors border border-transparent hover:border-border">
-                <div className={`mt-1 p-1.5 rounded-lg shrink-0 ${
-                  log.status === 'success' ? 'bg-success/10 text-success' : 
-                  log.status === 'critical' ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning'
-                }`}>
+              <div
+                key={log.id}
+                className="flex gap-3 items-start p-2 rounded-lg hover:bg-muted/50 transition-colors border border-transparent hover:border-border"
+              >
+                <div
+                  className={`mt-1 p-1.5 rounded-lg shrink-0 ${
+                    log.status === "success"
+                      ? "bg-success/10 text-success"
+                      : log.status === "critical"
+                        ? "bg-destructive/10 text-destructive"
+                        : "bg-warning/10 text-warning"
+                  }`}
+                >
                   <Clock className="h-3 w-3" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-foreground truncate">{log.userName}</p>
-                  <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{log.action}</p>
+                  <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">
+                    {log.action}
+                  </p>
                   <p className="text-[10px] text-muted-foreground/60 mt-1">{log.timestamp}</p>
                 </div>
               </div>
@@ -163,9 +229,17 @@ function EmployeDashboardIndex() {
                 className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
-            <select value={filterRegion} onChange={(e) => setFilterRegion(e.target.value)} className="px-3 py-2.5 rounded-lg border border-input bg-background text-sm">
+            <select
+              value={filterRegion}
+              onChange={(e) => setFilterRegion(e.target.value)}
+              className="px-3 py-2.5 rounded-lg border border-input bg-background text-sm"
+            >
               <option value="all">Toutes les régions</option>
-              {regions.map((r) => <option key={r} value={r}>{r}</option>)}
+              {regions.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -173,24 +247,43 @@ function EmployeDashboardIndex() {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                <th className="px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Agriculteur</th>
-                <th className="px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Région</th>
-                <th className="text-right px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Cultivé</th>
-                <th className="px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Paiement</th>
-                <th className="px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Livraison</th>
+                <th className="px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Agriculteur
+                </th>
+                <th className="px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Région
+                </th>
+                <th className="text-right px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Cultivé
+                </th>
+                <th className="px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Paiement
+                </th>
+                <th className="px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Livraison
+                </th>
               </tr>
             </thead>
             <tbody>
-              {filtered.slice(0, 5).map((f) => (
-                <tr key={f.id} className="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
+              {filtered.map((f) => (
+                <tr
+                  key={f.id}
+                  className="border-b border-border last:border-0 hover:bg-muted/50 transition-colors"
+                >
                   <td className="px-5 py-4">
-                    <div className="font-medium text-sm text-foreground">{f.name || 'Inconnu'}</div>
-                    <div className="text-xs text-muted-foreground">{f.cin || 'N/A'}</div>
+                    <div className="font-medium text-sm text-foreground">{f.name || "Inconnu"}</div>
+                    <div className="text-xs text-muted-foreground">{f.cin || "N/A"}</div>
                   </td>
-                  <td className="px-5 py-4 text-sm text-muted-foreground">{f.region || 'N/A'}</td>
-                  <td className="px-5 py-4 text-sm text-foreground text-right">{f.cultivatedQty || 0} ha</td>
-                  <td className="px-5 py-4"><StatusBadge status={f.paymentStatus || 'En attente'} /></td>
-                  <td className="px-5 py-4"><StatusBadge status={f.deliveryStatus || 'En cours'} /></td>
+                  <td className="px-5 py-4 text-sm text-muted-foreground">{f.region || "N/A"}</td>
+                  <td className="px-5 py-4 text-sm text-foreground text-right">
+                    {f.cultivatedQty || 0} ha
+                  </td>
+                  <td className="px-5 py-4">
+                    <StatusBadge status={f.paymentStatus || "En attente"} />
+                  </td>
+                  <td className="px-5 py-4">
+                    <StatusBadge status={f.deliveryStatus || "En cours"} />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -208,7 +301,13 @@ function QualityBadge({ quality }: { quality: string }) {
     Moyenne: "bg-warning/10 text-warning",
     Faible: "bg-destructive/10 text-destructive",
   };
-  return <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${colors[quality] || ""}`}>{quality}</span>;
+  return (
+    <span
+      className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${colors[quality] || ""}`}
+    >
+      {quality}
+    </span>
+  );
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -219,5 +318,11 @@ function StatusBadge({ status }: { status: string }) {
     "En cours": "bg-chart-3/20 text-chart-3",
     "Non payé": "bg-destructive/10 text-destructive",
   };
-  return <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${colors[status] || ""}`}>{status}</span>;
+  return (
+    <span
+      className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${colors[status] || ""}`}
+    >
+      {status}
+    </span>
+  );
 }

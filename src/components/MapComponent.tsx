@@ -1,4 +1,4 @@
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useEffect } from "react";
@@ -18,7 +18,50 @@ const DefaultIcon = L.icon({
   shadowSize: [41, 41],
 });
 
+const GreenIcon = L.icon({
+  iconUrl:
+    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+const GoldIcon = L.icon({
+  iconUrl:
+    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png",
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+const RedIcon = L.icon({
+  iconUrl:
+    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
 L.Marker.prototype.options.icon = DefaultIcon;
+
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case "optimal":
+      return GreenIcon;
+    case "warning":
+      return GoldIcon;
+    case "critical":
+      return RedIcon;
+    default:
+      return DefaultIcon;
+  }
+};
 
 interface Region {
   id: number;
@@ -33,6 +76,16 @@ interface Region {
 interface MapComponentProps {
   regions: Region[];
   activeRegion: Region | null;
+  onMapClick?: (lat: number, lng: number) => void;
+}
+
+function MapEvents({ onClick }: { onClick?: (lat: number, lng: number) => void }) {
+  const map = useMapEvents({
+    click(e) {
+      if (onClick) onClick(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return null;
 }
 
 function ChangeView({ center, zoom }: { center: [number, number]; zoom: number }) {
@@ -43,7 +96,7 @@ function ChangeView({ center, zoom }: { center: [number, number]; zoom: number }
   return null;
 }
 
-export default function MapComponent({ regions, activeRegion }: MapComponentProps) {
+export default function MapComponent({ regions, activeRegion, onMapClick }: MapComponentProps) {
   const defaultCenter: [number, number] = [31.7917, -7.0926]; // Center of Morocco
   const defaultZoom = 6;
 
@@ -58,25 +111,46 @@ export default function MapComponent({ regions, activeRegion }: MapComponentProp
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      <MapEvents onClick={onMapClick} />
       {regions.map((region) => (
-        <Marker key={region.id} position={[region.lat, region.lng]}>
+        <Marker
+          key={region.id}
+          position={[region.lat, region.lng]}
+          icon={getStatusIcon(region.status)}
+        >
           <Popup>
             <div className="p-1">
               <h3 className="font-bold text-lg mb-1">{region.name}</h3>
               <div className="text-sm space-y-1">
-                <p><span className="text-muted-foreground">Production:</span> <span className="font-semibold text-primary">{region.production}</span></p>
-                <p><span className="text-muted-foreground">Agriculteurs:</span> <span className="font-semibold">{region.farmers}</span></p>
-                <p><span className="text-muted-foreground">Statut:</span> <span className={`font-semibold ${
-                  region.status === 'optimal' ? 'text-success' : 
-                  region.status === 'warning' ? 'text-warning' : 'text-destructive'
-                }`}>{region.status}</span></p>
+                <p>
+                  <span className="text-muted-foreground">Production:</span>{" "}
+                  <span className="font-semibold text-primary">{region.production}</span>
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Agriculteurs:</span>{" "}
+                  <span className="font-semibold">{region.farmers}</span>
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Statut:</span>{" "}
+                  <span
+                    className={`font-semibold ${
+                      region.status === "optimal"
+                        ? "text-success"
+                        : region.status === "warning"
+                          ? "text-warning"
+                          : "text-destructive"
+                    }`}
+                  >
+                    {region.status}
+                  </span>
+                </p>
               </div>
             </div>
           </Popup>
         </Marker>
       ))}
       {activeRegion && (
-        <ChangeView center={[activeRegion.lat, activeRegion.lng]} zoom={9} />
+        <ChangeView center={[Number(activeRegion.lat), Number(activeRegion.lng)]} zoom={9} />
       )}
     </MapContainer>
   );

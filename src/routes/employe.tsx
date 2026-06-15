@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
+import { useSocket } from "@/hooks/use-socket";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
@@ -12,6 +13,7 @@ export const Route = createFileRoute("/employe")({
 function EmployeLayout() {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
+  useSocket(); // Active les notifications temps réel
 
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "employe")) {

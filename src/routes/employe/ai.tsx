@@ -17,12 +17,12 @@ interface Message {
 const STORAGE_KEY = "cosumar_ai_messages";
 
 function AIAssistantPage() {
-  const { apiFetch } = useAuth();
+  const { user, apiFetch } = useAuth();
   const [query, setQuery] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [appData, setAppData] = useState<any>(null);
-  
+
   const [messages, setMessages] = useState<Message[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -35,13 +35,23 @@ function AIAssistantPage() {
       }
     }
     return [
-      { id: 1, role: "bot", content: "Bonjour ! Je suis votre assistant IA COSUMAR. Je peux vous aider à analyser les rendements, trouver des informations sur les agriculteurs ou générer des rapports de campagne. Que puis-je faire pour vous aujourd'hui ?" }
+      {
+        id: 1,
+        role: "bot",
+        content:
+          "Bonjour ! Je suis votre assistant IA COSUMAR. Je peux vous aider à analyser les rendements, trouver des informations sur les agriculteurs ou générer des rapports de campagne. Que puis-je faire pour vous aujourd'hui ?",
+      },
     ];
   });
 
   const clearHistory = () => {
     const defaultMsg: Message[] = [
-      { id: 1, role: "bot", content: "Bonjour ! Je suis votre assistant IA COSUMAR. Je peux vous aider à analyser les rendements, trouver des informations sur les agriculteurs ou générer des rapports de campagne. Que puis-je faire pour vous aujourd'hui ?" }
+      {
+        id: 1,
+        role: "bot",
+        content:
+          "Bonjour ! Je suis votre assistant IA COSUMAR. Je peux vous aider à analyser les rendements, trouver des informations sur les agriculteurs ou générer des rapports de campagne. Que puis-je faire pour vous aujourd'hui ?",
+      },
     ];
     setMessages(defaultMsg);
     localStorage.removeItem(STORAGE_KEY);
@@ -52,29 +62,40 @@ function AIAssistantPage() {
   useEffect(() => {
     const fetchContextData = async () => {
       try {
-        const [statsRes, farmersRes, productionRes, paymentsRes, logsRes] = await Promise.all([
-          apiFetch('/stats/dashboard'),
-          apiFetch('/farmers'),
-          apiFetch('/production'),
-          apiFetch('/payments'),
-          apiFetch('/logs')
-        ]);
+        const isAdmin = user?.role === "admin";
+        const fetchPromises = [
+          apiFetch("/dashboard-stats"),
+          apiFetch("/farmers"),
+          apiFetch("/production"),
+          apiFetch("/payments"),
+        ];
 
-        const [stats, farmers, production, payments, logs] = await Promise.all([
-          statsRes.json(),
-          farmersRes.json(),
-          productionRes.json(),
-          paymentsRes.json(),
-          logsRes.json()
-        ]);
+        if (isAdmin) {
+          fetchPromises.push(apiFetch("/logs"));
+        }
+
+        const responses = await Promise.all(fetchPromises);
+
+        // Vérifier si toutes les réponses sont OK
+        for (const res of responses) {
+          if (!res.ok && res.status !== 403) {
+            console.warn(`Fetch warning: ${res.url} returned ${res.status}`);
+          }
+        }
+
+        const stats = await responses[0].json();
+        const farmers = await responses[1].json();
+        const production = await responses[2].json();
+        const payments = await responses[3].json();
+        const logs = isAdmin && responses[4] ? await responses[4].json() : [];
 
         setAppData({ stats, farmers, production, payments, logs });
       } catch (err) {
         console.error("Failed to fetch AI context data:", err);
       }
     };
-    fetchContextData();
-  }, [apiFetch]);
+    if (user) fetchContextData();
+  }, [apiFetch, user]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
@@ -86,55 +107,66 @@ function AIAssistantPage() {
   const generateAIResponse = async (userQuery: string) => {
     const lowerQuery = userQuery.toLowerCase();
     setIsTyping(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
     let response = "";
 
     if (!appData) {
-      response = "Je suis en train de charger les dernières données de COSUMAR. Veuillez patienter un instant...";
+      response =
+        "Je suis en train de charger les dernières données de COSUMAR. Veuillez patienter un instant...";
     } else {
       // Logic based on REAL data
       if (lowerQuery.includes("rendement") || lowerQuery.includes("production")) {
-        const prod = appData.stats.totalProduction || "2,500";
-        const harvested = appData.stats.totalHarvested || "120";
+        const prod = Number(appData.stats.totalProduction) || 0;
+        const harvested = Number(appData.stats.totalHarvested) || 0;
         response = `Le rendement total actuel est de ${prod} tonnes. Nous avons récolté ${harvested} tonnes jusqu'à présent cette saison.`;
-      } 
-      else if (lowerQuery.includes("agriculteur") || lowerQuery.includes("fermier")) {
+      } else if (lowerQuery.includes("agriculteur") || lowerQuery.includes("fermier")) {
         const count = appData.stats.totalFarmers || appData.farmers.length;
-        const topFarmer = appData.farmers[0]?.name || "Ahmed Bennani";
-        response = `Nous avons ${count} agriculteurs actifs. L'un des plus importants est ${topFarmer} dans la région de ${appData.farmers[0]?.region || 'Doukkala'}.`;
-      } 
-      else if (lowerQuery.includes("paiement") || lowerQuery.includes("argent")) {
-        const pending = appData.stats.pendingPayments || "45,000";
+        const topFarmer = appData.farmers[0];
+        response = topFarmer
+          ? `Nous avons ${count} agriculteurs actifs. Le premier dossier disponible est ${topFarmer.name} dans la région de ${topFarmer.region || "non renseignée"}.`
+          : `Nous avons ${count} agriculteurs actifs. Aucun dossier agriculteur détaillé n'est encore disponible dans la base.`;
+      } else if (lowerQuery.includes("paiement") || lowerQuery.includes("argent")) {
+        const pending = Number(appData.stats.pendingPayments) || 0;
         response = `Le montant total des paiements en attente s'élève à ${pending} DH. Les derniers virements sont en cours de traitement.`;
-      } 
-      else if (lowerQuery.includes("sécurité") || lowerQuery.includes("brute force") || lowerQuery.includes("attaque")) {
-        const criticalLogs = appData.logs.filter((l: any) => l.status === 'critical');
+      } else if (
+        lowerQuery.includes("sécurité") ||
+        lowerQuery.includes("brute force") ||
+        lowerQuery.includes("attaque")
+      ) {
+        const criticalLogs = appData.logs.filter((l: any) => l.status === "critical");
         if (criticalLogs.length > 0) {
           response = `ALERTE : J'ai détecté ${criticalLogs.length} incident(s) de sécurité critique(s). Le dernier concerne : ${criticalLogs[0].details}.`;
         } else {
-          response = "Aucun incident de sécurité majeur n'a été détecté récemment. Le système est stable.";
+          response =
+            "Aucun incident de sécurité majeur n'a été détecté récemment. Le système est stable.";
         }
-      }
-      else if (lowerQuery.includes("bonjour") || lowerQuery.includes("salut")) {
-        response = "Bonjour ! Je suis connecté aux données en temps réel de COSUMAR. Je peux vous renseigner sur la production, les agriculteurs, les paiements ou la sécurité.";
-      }
-      else {
-        response = "Je peux vous donner des détails précis sur les " + appData.stats.totalFarmers + " agriculteurs, les " + appData.stats.totalProduction + " tonnes de production, ou les " + appData.stats.pendingPayments + " DH de paiements. Que voulez-vous savoir exactement ?";
+      } else if (lowerQuery.includes("bonjour") || lowerQuery.includes("salut")) {
+        response =
+          "Bonjour ! Je suis connecté aux données en temps réel de COSUMAR. Je peux vous renseigner sur la production, les agriculteurs, les paiements ou la sécurité.";
+      } else {
+        response =
+          "Je peux vous donner des détails précis sur les " +
+          appData.stats.totalFarmers +
+          " agriculteurs, les " +
+          appData.stats.totalProduction +
+          " tonnes de production, ou les " +
+          appData.stats.pendingPayments +
+          " DH de paiements. Que voulez-vous savoir exactement ?";
       }
     }
 
-    setMessages(prev => [...prev, { id: Date.now(), role: "bot", content: response }]);
+    setMessages((prev) => [...prev, { id: Date.now(), role: "bot", content: response }]);
     setIsTyping(false);
   };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim() || isTyping) return;
-    
+
     const userQuery = query.trim();
     const newMsg: Message = { id: Date.now(), role: "user", content: userQuery };
-    setMessages(prev => [...prev, newMsg]);
+    setMessages((prev) => [...prev, newMsg]);
     setQuery("");
 
     await generateAIResponse(userQuery);
@@ -147,10 +179,12 @@ function AIAssistantPage() {
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             Assistant IA <Sparkles className="h-5 w-5 text-gold" />
           </h1>
-          <p className="text-muted-foreground mt-1 text-sm">Interrogez les données de production en langage naturel</p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Interrogez les données de production en langage naturel
+          </p>
         </div>
         {messages.length > 1 && (
-          <button 
+          <button
             onClick={clearHistory}
             className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-destructive transition-colors p-2 hover:bg-destructive/10 rounded-xl"
             title="Effacer l'historique"
@@ -165,17 +199,26 @@ function AIAssistantPage() {
         {/* Chat Area */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth">
           {messages.map((msg) => (
-            <div key={msg.id} className={`flex gap-4 max-w-[85%] ${msg.role === 'user' ? 'ml-auto flex-row-reverse' : ''}`}>
-              <div className={`h-10 w-10 shrink-0 rounded-xl flex items-center justify-center shadow-sm ${
-                msg.role === 'bot' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-              }`}>
-                {msg.role === 'bot' ? <Bot className="h-5 w-5" /> : <User className="h-5 w-5" />}
+            <div
+              key={msg.id}
+              className={`flex gap-4 max-w-[85%] ${msg.role === "user" ? "ml-auto flex-row-reverse" : ""}`}
+            >
+              <div
+                className={`h-10 w-10 shrink-0 rounded-xl flex items-center justify-center shadow-sm ${
+                  msg.role === "bot"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {msg.role === "bot" ? <Bot className="h-5 w-5" /> : <User className="h-5 w-5" />}
               </div>
-              <div className={`p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${
-                msg.role === 'user' 
-                  ? 'bg-primary text-primary-foreground rounded-tr-none' 
-                  : 'bg-muted/30 border border-border text-foreground rounded-tl-none'
-              }`}>
+              <div
+                className={`p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                  msg.role === "user"
+                    ? "bg-primary text-primary-foreground rounded-tr-none"
+                    : "bg-muted/30 border border-border text-foreground rounded-tl-none"
+                }`}
+              >
                 {msg.content}
               </div>
             </div>
@@ -187,7 +230,9 @@ function AIAssistantPage() {
               </div>
               <div className="p-4 rounded-2xl bg-muted/30 border border-border flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                <span className="text-xs text-muted-foreground font-medium">L'IA analyse les données...</span>
+                <span className="text-xs text-muted-foreground font-medium">
+                  L'IA analyse les données...
+                </span>
               </div>
             </div>
           )}
@@ -195,8 +240,14 @@ function AIAssistantPage() {
 
         {/* Input Area */}
         <div className="p-4 bg-muted/20 border-t border-border">
-          <form onSubmit={handleSend} className="relative flex items-end gap-2 bg-background border border-border rounded-2xl p-2 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
-            <button type="button" className="p-2.5 text-muted-foreground hover:text-primary transition-colors rounded-xl hover:bg-muted">
+          <form
+            onSubmit={handleSend}
+            className="relative flex items-end gap-2 bg-background border border-border rounded-2xl p-2 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all"
+          >
+            <button
+              type="button"
+              className="p-2.5 text-muted-foreground hover:text-primary transition-colors rounded-xl hover:bg-muted"
+            >
               <Paperclip className="h-5 w-5" />
             </button>
             <textarea
@@ -207,14 +258,14 @@ function AIAssistantPage() {
               rows={1}
               disabled={isTyping}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
+                if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   handleSend(e);
                 }
               }}
             />
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={!query.trim() || isTyping}
               className="p-3 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md active:scale-95"
             >
@@ -229,4 +280,3 @@ function AIAssistantPage() {
     </div>
   );
 }
-

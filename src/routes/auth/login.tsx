@@ -4,6 +4,14 @@ import { useAuth, type UserRole } from "@/lib/auth-context";
 import cosumarLogo from "@/assets/cosumar-logo.png";
 import { RefreshCw } from "lucide-react";
 
+const getApiUrl = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (typeof window !== "undefined") return `http://${window.location.hostname}:5000`;
+  return "http://localhost:5000";
+};
+
+const API_URL = getApiUrl();
+
 export const Route = createFileRoute("/auth/login")({
   validateSearch: (search: Record<string, unknown>) => ({
     role: (search.role as UserRole) || "client",
@@ -32,8 +40,7 @@ function LoginPage() {
 
   const fetchSettings = async () => {
     try {
-      const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      const response = await fetch(`http://${hostname}:5000/settings`);
+      const response = await fetch(`${API_URL}/settings`);
       const data = await response.json();
       setSettings(data);
       if (data.security_captcha) {
@@ -47,8 +54,7 @@ function LoginPage() {
   const fetchCaptcha = async () => {
     try {
       setCaptchaData(null); // Reset before fetch
-      const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      const response = await fetch(`http://${hostname}:5000/auth/captcha`);
+      const response = await fetch(`${API_URL}/auth/captcha`);
       const data = await response.json();
       console.log("Nouveau CAPTCHA reçu:", data.captcha);
       setCaptchaData(data.captcha);
@@ -76,9 +82,13 @@ function LoginPage() {
 
     const currentRole = role as UserRole;
     const result = await login(email, password, currentRole, captchaInput);
-    
+
     if (result.success) {
-      const routes: Record<UserRole, string> = { admin: "/admin", employe: "/employe", client: "/client" };
+      const routes: Record<UserRole, string> = {
+        admin: "/admin",
+        employe: "/employe",
+        client: "/client",
+      };
       navigate({ to: routes[currentRole] });
     } else {
       setError(result.message || "Email ou mot de passe incorrect");
@@ -96,13 +106,19 @@ function LoginPage() {
             <img src={cosumarLogo} alt="COSUMAR" className="h-10 w-10 object-contain" />
             <span className="font-heading text-xl font-bold text-primary">COSUMAR</span>
           </Link>
-          <h1 className="text-2xl font-bold text-foreground">Connexion — {roleLabels[role as UserRole]}</h1>
-          <p className="mt-2 text-muted-foreground text-sm">Entrez vos identifiants pour accéder à votre espace</p>
+          <h1 className="text-2xl font-bold text-foreground">
+            Connexion — {roleLabels[role as UserRole]}
+          </h1>
+          <p className="mt-2 text-muted-foreground text-sm">
+            Entrez vos identifiants pour accéder à votre espace
+          </p>
         </div>
         <div className="bg-card rounded-2xl border border-border p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>
+              <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+                {error}
+              </div>
             )}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Email</label>
@@ -115,7 +131,9 @@ function LoginPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Mot de passe</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Mot de passe
+              </label>
               <input
                 type="password"
                 value={password}
@@ -128,14 +146,18 @@ function LoginPage() {
             {/* Section CAPTCHA */}
             {settings?.security_captcha && (
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground">Vérification de sécurité</label>
+                <label className="block text-sm font-medium text-foreground">
+                  Vérification de sécurité
+                </label>
                 <div className="flex items-center gap-3">
                   <div className="flex-1 bg-muted h-12 rounded-lg flex items-center justify-center font-mono font-bold tracking-[0.5em] text-lg select-none italic border border-border shadow-inner relative overflow-hidden">
                     <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
-                    <span className="relative z-10 transform -rotate-3 skew-x-12 text-primary">{captchaData || "..."}</span>
+                    <span className="relative z-10 transform -rotate-3 skew-x-12 text-primary">
+                      {captchaData || "..."}
+                    </span>
                   </div>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={fetchCaptcha}
                     className="p-3 rounded-lg border border-border hover:bg-muted transition-colors text-muted-foreground"
                     title="Actualiser le code"
@@ -170,7 +192,10 @@ function LoginPage() {
             </p>
           )}
           <p className="mt-3 text-center">
-            <Link to="/auth/select-role" className="text-sm text-muted-foreground hover:text-primary">
+            <Link
+              to="/auth/select-role"
+              className="text-sm text-muted-foreground hover:text-primary"
+            >
               ← Changer de rôle
             </Link>
           </p>

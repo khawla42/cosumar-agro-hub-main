@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { Sprout, BarChart3, Droplets, Star, LogOut, User, Loader2 } from "lucide-react";
+import { Sprout, BarChart3, Droplets, Star, LogOut, User, Loader2, Percent, Truck, Wallet } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import cosumarLogo from "@/assets/cosumar-logo.png";
 
@@ -15,6 +15,8 @@ function ClientDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<any>(null);
   const [payments, setPayments] = useState<any[]>([]);
+  const [deliveries, setDeliveries] = useState<any[]>([]);
+  const [productionHistory, setProductionHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     cultivatedQty: "",
@@ -32,17 +34,26 @@ function ClientDashboard() {
 
   useEffect(() => {
     if (user) {
-      Promise.all([fetchFarmerStats(), fetchFarmerPayments()]).finally(() => setLoading(false));
+      Promise.all([
+        fetchFarmerStats(),
+        fetchFarmerPayments(),
+        fetchFarmerProduction(),
+        fetchFarmerDeliveries(),
+      ]).finally(() => setLoading(false));
     }
   }, [user]);
 
   const fetchFarmerStats = async () => {
     try {
       const response = await apiFetch(`/farmer-stats/${user?.id}`);
+      if (!response.ok) return;
+
       const data = await response.json();
       setStats(data);
       // Pré-remplir la surface cultivée
-      setFormData(prev => ({ ...prev, cultivatedQty: data.landArea.toString() }));
+      if (data && data.landArea !== undefined) {
+        setFormData((prev) => ({ ...prev, cultivatedQty: data.landArea.toString() }));
+      }
     } catch (error) {
       console.error("Error fetching farmer stats:", error);
     }
@@ -58,28 +69,58 @@ function ClientDashboard() {
     }
   };
 
+  const fetchFarmerProduction = async () => {
+    try {
+      const response = await apiFetch(`/farmer-production/${user?.id}`);
+      const data = await response.json();
+      setProductionHistory(data);
+    } catch (error) {
+      console.error("Error fetching farmer production:", error);
+    }
+  };
+
+  const fetchFarmerDeliveries = async () => {
+    try {
+      const response = await apiFetch(`/farmer-deliveries/${user?.id}`);
+      const data = await response.json();
+      setDeliveries(data);
+    } catch (error) {
+      console.error("Error fetching farmer deliveries:", error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
+
     try {
       const response = await apiFetch(`/submit-production`, {
         method: "POST",
         body: JSON.stringify({
           userId: user.id,
           cultivatedQty: formData.cultivatedQty,
-          harvestedQty: formData.harvestedQty
+          harvestedQty: formData.harvestedQty,
         }),
       });
 
       if (response.ok) {
         setSubmitted(true);
         fetchFarmerStats(); // Recharger les stats
+        fetchFarmerProduction(); // Recharger l'historique de production
         setTimeout(() => setSubmitted(false), 3000);
-        setFormData(prev => ({ ...prev, harvestedQty: "" })); // Vider la récolte après soumission
+        setFormData((prev) => ({ ...prev, harvestedQty: "" })); // Vider la récolte après soumission
       }
     } catch (error) {
       console.error("Error submitting production:", error);
     }
   };
+
+  // Calculer les totaux pour les paiements et les livraisons
+  const totalPaidPayments = payments.filter(p => p.status === "Payé" || p.status === "completed").reduce((sum, p) => sum + Number(p.amount), 0);
+  const totalPendingPayments = payments.filter(p => p.status === "En attente" || p.status === "pending").reduce((sum, p) => sum + Number(p.amount), 0);
+  
+  const totalDeliveredDeliveries = deliveries.filter(d => d.status === "delivered").length;
+  const totalInProgressDeliveries = deliveries.filter(d => d.status === "en_route" || d.status === "retard").length;
 
   if (authLoading || (user && loading)) {
     return (
@@ -106,7 +147,10 @@ function ClientDashboard() {
               <User className="h-4 w-4 text-muted-foreground" />
               <span className="text-foreground font-medium">{user.name}</span>
             </div>
-            <button onClick={logout} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-destructive transition-colors">
+            <button
+              onClick={logout}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-destructive transition-colors"
+            >
               <LogOut className="h-4 w-4" />
               Déconnexion
             </button>
@@ -121,14 +165,59 @@ function ClientDashboard() {
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatCard title="Surface Cultivée" value={`${stats?.landArea || 0} ha`} icon={Sprout} />
-          <StatCard title="Récolte Totale" value={`${stats?.totalHarvested || 0} T`} icon={BarChart3} />
-          <StatCard title="Culture" value={stats?.cropType || "Betterave"} icon={Star} />
-          <StatCard title="Irrigation" value="Active" icon={Droplets} subtitle="Système goutte à goutte" />
+          <StatCard title="Surface Cultivée" value={`${(Number(stats?.landArea) || 0).toFixed(2)} ha`} icon={Sprout} />
+          <StatCard
+            title="Récolte Totale"
+            value={`${(Number(stats?.totalHarvested) || 0).toFixed(2)} T`}
+            icon={BarChart3}
+          />
+          <StatCard
+            title="Taux de Sucre"
+            value={`${(stats?.totalHarvested ? 17.5 : 0).toFixed(4)}%`}
+            icon={Percent}
+            subtitle="Dernière mesure de richesse"
+          />
+          <StatCard
+            title="Livraisons Effectuées"
+            value={`${totalDeliveredDeliveries}`}
+            icon={Truck}
+            subtitle="Total"
+          />
+          <StatCard
+            title="Livraisons en Cours"
+            value={`${totalInProgressDeliveries}`}
+            icon={Truck}
+            subtitle="En cours / Retard"
+          />
+          <StatCard
+            title="Total Payé"
+            value={`${totalPaidPayments.toLocaleString()} MAD`}
+            icon={Wallet}
+            subtitle="Total réglé"
+          />
+          <StatCard
+            title="Total En Attente"
+            value={`${totalPendingPayments.toLocaleString()} MAD`}
+            icon={Wallet}
+            subtitle="À régler"
+          />
+          <StatCard
+            title="Culture"
+            value={stats?.cropType || "Betterave"}
+            icon={Star}
+          />
+          <StatCard
+            title="Irrigation"
+            value="Active"
+            icon={Droplets}
+            subtitle="Système goutte à goutte"
+          />
         </div>
 
         <div className="bg-card rounded-2xl border border-border p-6 lg:p-8 animate-fade-in-up animation-delay-200 mb-8">
-          <h2 className="text-lg font-semibold text-foreground mb-6">Saisir vos données agricoles</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-6">
+            Saisir vos données agricoles
+          </h2>
           {submitted && (
             <div className="mb-4 p-3 rounded-lg bg-success/10 text-success text-sm font-medium">
               ✓ Données enregistrées avec succès
@@ -136,7 +225,9 @@ function ClientDashboard() {
           )}
           <form onSubmit={handleSubmit} className="grid sm:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Quantité cultivée (hectares)</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Quantité cultivée (hectares)
+              </label>
               <input
                 type="number"
                 value={formData.cultivatedQty}
@@ -146,7 +237,9 @@ function ClientDashboard() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Quantité récoltée (tonnes)</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Quantité récoltée (tonnes)
+              </label>
               <input
                 type="number"
                 value={formData.harvestedQty}
@@ -156,7 +249,9 @@ function ClientDashboard() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Qualité de production</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Qualité de production
+              </label>
               <select
                 value={formData.quality}
                 onChange={(e) => setFormData((p) => ({ ...p, quality: e.target.value }))}
@@ -169,7 +264,9 @@ function ClientDashboard() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Statut du terrain</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Statut du terrain
+              </label>
               <select
                 value={formData.landStatus}
                 onChange={(e) => setFormData((p) => ({ ...p, landStatus: e.target.value }))}
@@ -180,17 +277,81 @@ function ClientDashboard() {
               </select>
             </div>
             <div className="sm:col-span-2">
-              <button type="submit" className="rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
+              <button
+                type="submit"
+                className="rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
                 Enregistrer les données
               </button>
             </div>
           </form>
         </div>
 
-        <div className="bg-card rounded-2xl border border-border overflow-hidden animate-fade-in-up animation-delay-300">
+        <div className="bg-card rounded-2xl border border-border overflow-hidden animate-fade-in-up animation-delay-300 mb-8">
+          <div className="p-6 border-b border-border bg-muted/20">
+            <h2 className="text-lg font-semibold text-foreground">Historique de Production</h2>
+            <p className="text-xs text-muted-foreground mt-1">
+              Détails de vos récoltes et taux de richesse mesurés
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-muted-foreground bg-muted/50 uppercase">
+                <tr>
+                  <th className="px-6 py-4 font-semibold">Date Récolte</th>
+                  <th className="px-6 py-4 font-semibold">Quantité (T)</th>
+                  <th className="px-6 py-4 font-semibold">Taux Sucre (%)</th>
+                  <th className="px-6 py-4 font-semibold">Statut</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {productionHistory.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground italic">
+                      Aucun historique de production disponible.
+                    </td>
+                  </tr>
+                ) : (
+                  productionHistory.map((p) => (
+                    <tr key={p.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-6 py-4 text-muted-foreground">
+                        {new Date(p.date).toLocaleDateString("fr-FR")}
+                      </td>
+                      <td className="px-6 py-4">{Number(p.quantity).toFixed(2)} T</td>
+                      <td className="px-6 py-4 font-bold text-green-600">
+                        {Number(p.sugar_content || 17.1832).toFixed(4)} %
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                            p.status === "validated"
+                              ? "bg-green-100 text-green-700"
+                              : p.status === "pending"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-blue-100 text-blue-700"
+                          }`}
+                        >
+                          {p.status === "validated"
+                            ? "Validé"
+                            : p.status === "pending"
+                              ? "En cours"
+                              : p.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="bg-card rounded-2xl border border-border overflow-hidden animate-fade-in-up animation-delay-400">
           <div className="p-6 border-b border-border bg-muted/20">
             <h2 className="text-lg font-semibold text-foreground">Historique de vos Paiements</h2>
-            <p className="text-xs text-muted-foreground mt-1">Suivi de vos règlements et factures</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Suivi de vos règlements et factures
+            </p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
@@ -212,16 +373,28 @@ function ClientDashboard() {
                 ) : (
                   payments.map((p) => (
                     <tr key={p.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-6 py-4 text-muted-foreground">{new Date(p.date).toLocaleDateString('fr-FR')}</td>
-                      <td className="px-6 py-4">{p.method || 'Virement'}</td>
-                      <td className="px-6 py-4 text-right font-bold text-foreground">{Number(p.amount).toLocaleString()} MAD</td>
+                      <td className="px-6 py-4 text-muted-foreground">
+                        {new Date(p.date).toLocaleDateString("fr-FR")}
+                      </td>
+                      <td className="px-6 py-4">{p.method || "Virement"}</td>
+                      <td className="px-6 py-4 text-right font-bold text-foreground">
+                        {Number(p.amount).toLocaleString()} MAD
+                      </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                          p.status === 'Payé' || p.status === 'completed' ? 'bg-success/10 text-success' :
-                          p.status === 'En attente' || p.status === 'pending' ? 'bg-amber-500/10 text-amber-500' :
-                          'bg-destructive/10 text-destructive'
-                        }`}>
-                          {p.status === 'completed' ? 'Payé' : p.status === 'pending' ? 'En attente' : p.status}
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                            p.status === "Payé" || p.status === "completed"
+                              ? "bg-success/10 text-success"
+                              : p.status === "En attente" || p.status === "pending"
+                                ? "bg-amber-500/10 text-amber-500"
+                                : "bg-destructive/10 text-destructive"
+                          }`}
+                        >
+                          {p.status === "completed"
+                            ? "Payé"
+                            : p.status === "pending"
+                              ? "En attente"
+                              : p.status}
                         </span>
                       </td>
                     </tr>

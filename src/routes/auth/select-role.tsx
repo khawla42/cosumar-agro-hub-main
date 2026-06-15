@@ -11,9 +11,27 @@ export const Route = createFileRoute("/auth/select-role")({
 
 function SelectRole() {
   const roles = [
-    { role: "admin", label: "Administrateur", desc: "Gestion complète du système", icon: Shield, color: "bg-primary" },
-    { role: "employe", label: "Employé", desc: "Suivi des agriculteurs et production", icon: Briefcase, color: "bg-chart-2" },
-    { role: "client", label: "Agriculteur", desc: "Gestion de vos données agricoles", icon: Sprout, color: "bg-success" },
+    {
+      role: "admin",
+      label: "Administrateur",
+      desc: "Gestion complète du système",
+      icon: Shield,
+      color: "bg-primary",
+    },
+    {
+      role: "employe",
+      label: "Employé",
+      desc: "Suivi des agriculteurs et production",
+      icon: Briefcase,
+      color: "bg-chart-2",
+    },
+    {
+      role: "client",
+      label: "Agriculteur",
+      desc: "Gestion de vos données agricoles",
+      icon: Sprout,
+      color: "bg-success",
+    },
   ] as const;
 
   return (

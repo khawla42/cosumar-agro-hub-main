@@ -10,9 +10,24 @@ export function Header() {
           <span className="font-heading text-xl font-bold text-primary">COSUMAR</span>
         </Link>
         <nav className="hidden md:flex items-center gap-8">
-          <a href="#about" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">À propos</a>
-          <a href="#services" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">Services</a>
-          <a href="#contact" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">Contact</a>
+          <a
+            href="#about"
+            className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+          >
+            À propos
+          </a>
+          <a
+            href="#services"
+            className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+          >
+            Services
+          </a>
+          <a
+            href="#contact"
+            className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+          >
+            Contact
+          </a>
         </nav>
         <Link
           to="/auth/select-role"

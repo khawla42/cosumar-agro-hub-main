@@ -18,8 +18,10 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as EmployeProductionRouteImport } from './routes/employe/production'
 import { Route as EmployePaymentsRouteImport } from './routes/employe/payments'
 import { Route as EmployeNotificationsRouteImport } from './routes/employe/notifications'
+import { Route as EmployeMessagesRouteImport } from './routes/employe/messages'
 import { Route as EmployeMapRouteImport } from './routes/employe/map'
 import { Route as EmployeFarmersRouteImport } from './routes/employe/farmers'
+import { Route as EmployeDeliveriesRouteImport } from './routes/employe/deliveries'
 import { Route as EmployeCalendarRouteImport } from './routes/employe/calendar'
 import { Route as EmployeAiRouteImport } from './routes/employe/ai'
 import { Route as AuthSelectRoleRouteImport } from './routes/auth/select-role'
@@ -29,6 +31,7 @@ import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as AdminSecurityRouteImport } from './routes/admin/security'
 import { Route as AdminProductionRouteImport } from './routes/admin/production'
 import { Route as AdminPaymentsRouteImport } from './routes/admin/payments'
+import { Route as AdminMessagesRouteImport } from './routes/admin/messages'
 import { Route as AdminLogsRouteImport } from './routes/admin/logs'
 import { Route as AdminEmployeesRouteImport } from './routes/admin/employees'
 import { Route as AdminDeliveriesRouteImport } from './routes/admin/deliveries'
@@ -78,6 +81,11 @@ const EmployeNotificationsRoute = EmployeNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => EmployeRoute,
 } as any)
+const EmployeMessagesRoute = EmployeMessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => EmployeRoute,
+} as any)
 const EmployeMapRoute = EmployeMapRouteImport.update({
   id: '/map',
   path: '/map',
@@ -86,6 +94,11 @@ const EmployeMapRoute = EmployeMapRouteImport.update({
 const EmployeFarmersRoute = EmployeFarmersRouteImport.update({
   id: '/farmers',
   path: '/farmers',
+  getParentRoute: () => EmployeRoute,
+} as any)
+const EmployeDeliveriesRoute = EmployeDeliveriesRouteImport.update({
+  id: '/deliveries',
+  path: '/deliveries',
   getParentRoute: () => EmployeRoute,
 } as any)
 const EmployeCalendarRoute = EmployeCalendarRouteImport.update({
@@ -133,6 +146,11 @@ const AdminPaymentsRoute = AdminPaymentsRouteImport.update({
   path: '/payments',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminMessagesRoute = AdminMessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminLogsRoute = AdminLogsRouteImport.update({
   id: '/logs',
   path: '/logs',
@@ -157,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/admin/deliveries': typeof AdminDeliveriesRoute
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/logs': typeof AdminLogsRoute
+  '/admin/messages': typeof AdminMessagesRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/production': typeof AdminProductionRoute
   '/admin/security': typeof AdminSecurityRoute
@@ -166,8 +185,10 @@ export interface FileRoutesByFullPath {
   '/auth/select-role': typeof AuthSelectRoleRoute
   '/employe/ai': typeof EmployeAiRoute
   '/employe/calendar': typeof EmployeCalendarRoute
+  '/employe/deliveries': typeof EmployeDeliveriesRoute
   '/employe/farmers': typeof EmployeFarmersRoute
   '/employe/map': typeof EmployeMapRoute
+  '/employe/messages': typeof EmployeMessagesRoute
   '/employe/notifications': typeof EmployeNotificationsRoute
   '/employe/payments': typeof EmployePaymentsRoute
   '/employe/production': typeof EmployeProductionRoute
@@ -180,6 +201,7 @@ export interface FileRoutesByTo {
   '/admin/deliveries': typeof AdminDeliveriesRoute
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/logs': typeof AdminLogsRoute
+  '/admin/messages': typeof AdminMessagesRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/production': typeof AdminProductionRoute
   '/admin/security': typeof AdminSecurityRoute
@@ -189,8 +211,10 @@ export interface FileRoutesByTo {
   '/auth/select-role': typeof AuthSelectRoleRoute
   '/employe/ai': typeof EmployeAiRoute
   '/employe/calendar': typeof EmployeCalendarRoute
+  '/employe/deliveries': typeof EmployeDeliveriesRoute
   '/employe/farmers': typeof EmployeFarmersRoute
   '/employe/map': typeof EmployeMapRoute
+  '/employe/messages': typeof EmployeMessagesRoute
   '/employe/notifications': typeof EmployeNotificationsRoute
   '/employe/payments': typeof EmployePaymentsRoute
   '/employe/production': typeof EmployeProductionRoute
@@ -206,6 +230,7 @@ export interface FileRoutesById {
   '/admin/deliveries': typeof AdminDeliveriesRoute
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/logs': typeof AdminLogsRoute
+  '/admin/messages': typeof AdminMessagesRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/production': typeof AdminProductionRoute
   '/admin/security': typeof AdminSecurityRoute
@@ -215,8 +240,10 @@ export interface FileRoutesById {
   '/auth/select-role': typeof AuthSelectRoleRoute
   '/employe/ai': typeof EmployeAiRoute
   '/employe/calendar': typeof EmployeCalendarRoute
+  '/employe/deliveries': typeof EmployeDeliveriesRoute
   '/employe/farmers': typeof EmployeFarmersRoute
   '/employe/map': typeof EmployeMapRoute
+  '/employe/messages': typeof EmployeMessagesRoute
   '/employe/notifications': typeof EmployeNotificationsRoute
   '/employe/payments': typeof EmployePaymentsRoute
   '/employe/production': typeof EmployeProductionRoute
@@ -233,6 +260,7 @@ export interface FileRouteTypes {
     | '/admin/deliveries'
     | '/admin/employees'
     | '/admin/logs'
+    | '/admin/messages'
     | '/admin/payments'
     | '/admin/production'
     | '/admin/security'
@@ -242,8 +270,10 @@ export interface FileRouteTypes {
     | '/auth/select-role'
     | '/employe/ai'
     | '/employe/calendar'
+    | '/employe/deliveries'
     | '/employe/farmers'
     | '/employe/map'
+    | '/employe/messages'
     | '/employe/notifications'
     | '/employe/payments'
     | '/employe/production'
@@ -256,6 +286,7 @@ export interface FileRouteTypes {
     | '/admin/deliveries'
     | '/admin/employees'
     | '/admin/logs'
+    | '/admin/messages'
     | '/admin/payments'
     | '/admin/production'
     | '/admin/security'
@@ -265,8 +296,10 @@ export interface FileRouteTypes {
     | '/auth/select-role'
     | '/employe/ai'
     | '/employe/calendar'
+    | '/employe/deliveries'
     | '/employe/farmers'
     | '/employe/map'
+    | '/employe/messages'
     | '/employe/notifications'
     | '/employe/payments'
     | '/employe/production'
@@ -281,6 +314,7 @@ export interface FileRouteTypes {
     | '/admin/deliveries'
     | '/admin/employees'
     | '/admin/logs'
+    | '/admin/messages'
     | '/admin/payments'
     | '/admin/production'
     | '/admin/security'
@@ -290,8 +324,10 @@ export interface FileRouteTypes {
     | '/auth/select-role'
     | '/employe/ai'
     | '/employe/calendar'
+    | '/employe/deliveries'
     | '/employe/farmers'
     | '/employe/map'
+    | '/employe/messages'
     | '/employe/notifications'
     | '/employe/payments'
     | '/employe/production'
@@ -374,6 +410,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmployeNotificationsRouteImport
       parentRoute: typeof EmployeRoute
     }
+    '/employe/messages': {
+      id: '/employe/messages'
+      path: '/messages'
+      fullPath: '/employe/messages'
+      preLoaderRoute: typeof EmployeMessagesRouteImport
+      parentRoute: typeof EmployeRoute
+    }
     '/employe/map': {
       id: '/employe/map'
       path: '/map'
@@ -386,6 +429,13 @@ declare module '@tanstack/react-router' {
       path: '/farmers'
       fullPath: '/employe/farmers'
       preLoaderRoute: typeof EmployeFarmersRouteImport
+      parentRoute: typeof EmployeRoute
+    }
+    '/employe/deliveries': {
+      id: '/employe/deliveries'
+      path: '/deliveries'
+      fullPath: '/employe/deliveries'
+      preLoaderRoute: typeof EmployeDeliveriesRouteImport
       parentRoute: typeof EmployeRoute
     }
     '/employe/calendar': {
@@ -451,6 +501,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPaymentsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/messages': {
+      id: '/admin/messages'
+      path: '/messages'
+      fullPath: '/admin/messages'
+      preLoaderRoute: typeof AdminMessagesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/logs': {
       id: '/admin/logs'
       path: '/logs'
@@ -479,6 +536,7 @@ interface AdminRouteChildren {
   AdminDeliveriesRoute: typeof AdminDeliveriesRoute
   AdminEmployeesRoute: typeof AdminEmployeesRoute
   AdminLogsRoute: typeof AdminLogsRoute
+  AdminMessagesRoute: typeof AdminMessagesRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
   AdminProductionRoute: typeof AdminProductionRoute
   AdminSecurityRoute: typeof AdminSecurityRoute
@@ -490,6 +548,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminDeliveriesRoute: AdminDeliveriesRoute,
   AdminEmployeesRoute: AdminEmployeesRoute,
   AdminLogsRoute: AdminLogsRoute,
+  AdminMessagesRoute: AdminMessagesRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
   AdminProductionRoute: AdminProductionRoute,
   AdminSecurityRoute: AdminSecurityRoute,
@@ -502,8 +561,10 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 interface EmployeRouteChildren {
   EmployeAiRoute: typeof EmployeAiRoute
   EmployeCalendarRoute: typeof EmployeCalendarRoute
+  EmployeDeliveriesRoute: typeof EmployeDeliveriesRoute
   EmployeFarmersRoute: typeof EmployeFarmersRoute
   EmployeMapRoute: typeof EmployeMapRoute
+  EmployeMessagesRoute: typeof EmployeMessagesRoute
   EmployeNotificationsRoute: typeof EmployeNotificationsRoute
   EmployePaymentsRoute: typeof EmployePaymentsRoute
   EmployeProductionRoute: typeof EmployeProductionRoute
@@ -513,8 +574,10 @@ interface EmployeRouteChildren {
 const EmployeRouteChildren: EmployeRouteChildren = {
   EmployeAiRoute: EmployeAiRoute,
   EmployeCalendarRoute: EmployeCalendarRoute,
+  EmployeDeliveriesRoute: EmployeDeliveriesRoute,
   EmployeFarmersRoute: EmployeFarmersRoute,
   EmployeMapRoute: EmployeMapRoute,
+  EmployeMessagesRoute: EmployeMessagesRoute,
   EmployeNotificationsRoute: EmployeNotificationsRoute,
   EmployePaymentsRoute: EmployePaymentsRoute,
   EmployeProductionRoute: EmployeProductionRoute,

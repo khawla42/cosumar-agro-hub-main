@@ -1,21 +1,32 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, MapPin, X, Trash2 } from "lucide-react";
-import { 
-  format, 
-  addMonths, 
-  subMonths, 
-  startOfMonth, 
-  endOfMonth, 
-  startOfWeek, 
-  endOfWeek, 
-  eachDayOfInterval, 
-  isSameMonth, 
-  isSameDay, 
+import { useState, useMemo, useEffect } from "react";
+import { useAuth } from "@/lib/auth-context";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Calendar as CalendarIcon,
+  Clock,
+  MapPin,
+  X,
+  Trash2,
+  Loader2,
+} from "lucide-react";
+import {
+  format,
+  addMonths,
+  subMonths,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  isSameMonth,
+  isSameDay,
   addDays,
-  parseISO
+  parseISO,
 } from "date-fns";
 import { fr } from "date-fns/locale";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/employe/calendar")({
   component: CalendarPage,
@@ -31,22 +42,41 @@ interface Event {
 }
 
 function CalendarPage() {
+  const { apiFetch } = useAuth();
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showModal, setShowModal] = useState(false);
-  const [events, setEvents] = useState<Event[]>([
-    { id: 1, title: "Visite Terrain - Ahmed", type: "visite", time: "09:00", location: "Doukkala, Secteur 4", date: format(new Date(), "yyyy-MM-dd") },
-    { id: 2, title: "Livraison prévue (Lot B)", type: "livraison", time: "14:00", location: "Usine Sidi Bennour", date: format(new Date(), "yyyy-MM-dd") },
-    { id: 3, title: "Inspection Qualité", type: "inspection", time: "16:00", location: "Tadla, Coopérative Ennour", date: format(addDays(new Date(), 1), "yyyy-MM-dd") },
-  ]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [newEvent, setNewEvent] = useState({
     title: "",
     type: "visite",
     time: "",
     location: "",
-    date: format(new Date(), "yyyy-MM-dd")
+    date: format(new Date(), "yyyy-MM-dd"),
   });
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    try {
+      const response = await apiFetch("/calendar-events");
+      if (!response.ok) {
+        setEvents([]);
+        return;
+      }
+      const data = await response.json();
+      setEvents(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      setEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(viewDate);
@@ -61,33 +91,59 @@ function CalendarPage() {
   }, [viewDate]);
 
   const selectedDayEvents = useMemo(() => {
-    return events.filter(evt => isSameDay(parseISO(evt.date), selectedDate));
+    return (Array.isArray(events) ? events : []).filter((evt) =>
+      isSameDay(parseISO(evt.date), selectedDate),
+    );
   }, [events, selectedDate]);
 
-  const handleAddEvent = () => {
+  const handleAddEvent = async () => {
     if (!newEvent.title || !newEvent.date) return;
 
-    setEvents([...events, {
-      ...newEvent,
-      id: Date.now()
-    }]);
-
-    setNewEvent({
-      title: "",
-      type: "visite",
-      time: "",
-      location: "",
-      date: format(selectedDate, "yyyy-MM-dd")
-    });
-    setShowModal(false);
+    try {
+      const response = await apiFetch("/calendar-events", {
+        method: "POST",
+        body: JSON.stringify(newEvent),
+      });
+      if (response.ok) {
+        toast.success("Événement ajouté");
+        fetchEvents();
+        setShowModal(false);
+        setNewEvent({
+          title: "",
+          type: "visite",
+          time: "",
+          location: "",
+          date: format(selectedDate, "yyyy-MM-dd"),
+        });
+      }
+    } catch (error) {
+      toast.error("Erreur lors de l'ajout");
+    }
   };
 
-  const handleDeleteEvent = (id: number) => {
-    setEvents(events.filter(e => e.id !== id));
+  const handleDeleteEvent = async (id: number) => {
+    if (!confirm("Supprimer cet événement ?")) return;
+    try {
+      const response = await apiFetch(`/calendar-events/${id}`, { method: "DELETE" });
+      if (response.ok) {
+        toast.success("Événement supprimé");
+        fetchEvents();
+      }
+    } catch (error) {
+      toast.error("Erreur lors de la suppression");
+    }
   };
 
   const nextMonth = () => setViewDate(addMonths(viewDate, 1));
   const prevMonth = () => setViewDate(subMonths(viewDate, 1));
+
+  if (loading) {
+    return (
+      <div className="h-[60vh] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-in-up">
@@ -98,13 +154,12 @@ function CalendarPage() {
         </div>
         <button
           onClick={() => {
-            setNewEvent(prev => ({ ...prev, date: format(selectedDate, "yyyy-MM-dd") }));
+            setNewEvent((prev) => ({ ...prev, date: format(selectedDate, "yyyy-MM-dd") }));
             setShowModal(true);
           }}
           className="bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
         >
-          <CalendarIcon className="h-4 w-4" />
-          + Nouvel Événement
+          <CalendarIcon className="h-4 w-4" />+ Nouvel Événement
         </button>
       </div>
 
@@ -115,13 +170,13 @@ function CalendarPage() {
               {format(viewDate, "MMMM yyyy", { locale: fr })}
             </h2>
             <div className="flex gap-2">
-              <button 
+              <button
                 onClick={prevMonth}
                 className="p-2 border border-border rounded-xl hover:bg-muted transition-colors"
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
-              <button 
+              <button
                 onClick={nextMonth}
                 className="p-2 border border-border rounded-xl hover:bg-muted transition-colors"
               >
@@ -131,42 +186,54 @@ function CalendarPage() {
           </div>
 
           <div className="grid grid-cols-7 gap-2">
-            {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(day => (
-              <div key={day} className="py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">{day}</div>
+            {["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map((day) => (
+              <div
+                key={day}
+                className="py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center"
+              >
+                {day}
+              </div>
             ))}
-            
+
             {calendarDays.map((day, i) => {
               const isSelected = isSameDay(day, selectedDate);
               const isCurrentMonth = isSameMonth(day, viewDate);
-              const dayEvents = events.filter(evt => isSameDay(parseISO(evt.date), day));
-              
+              const dayEvents = events.filter((evt) => isSameDay(parseISO(evt.date), day));
+
               return (
-                <div 
-                  key={i} 
+                <div
+                  key={i}
                   onClick={() => setSelectedDate(day)}
                   className={`
                     bg-background min-h-[90px] p-2 rounded-xl border transition-all cursor-pointer flex flex-col items-center gap-1
-                    ${isSelected ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'border-border hover:border-primary/30'}
-                    ${!isCurrentMonth ? 'opacity-30' : ''}
+                    ${isSelected ? "border-primary ring-2 ring-primary/20 bg-primary/5" : "border-border hover:border-primary/30"}
+                    ${!isCurrentMonth ? "opacity-30" : ""}
                   `}
                 >
-                  <span className={`
+                  <span
+                    className={`
                     inline-flex h-7 w-7 items-center justify-center rounded-lg text-sm font-semibold
-                    ${isSelected ? 'bg-primary text-primary-foreground' : 'text-foreground'}
-                  `}>
+                    ${isSelected ? "bg-primary text-primary-foreground" : "text-foreground"}
+                  `}
+                  >
                     {format(day, "d")}
                   </span>
                   <div className="flex flex-wrap justify-center gap-1 mt-auto pb-1">
                     {dayEvents.slice(0, 3).map((evt, idx) => (
-                      <div 
-                        key={idx} 
+                      <div
+                        key={idx}
                         className={`h-1.5 w-1.5 rounded-full ${
-                          evt.type === 'visite' ? 'bg-primary' : 
-                          evt.type === 'livraison' ? 'bg-gold' : 'bg-chart-3'
-                        }`} 
+                          evt.type === "visite"
+                            ? "bg-primary"
+                            : evt.type === "livraison"
+                              ? "bg-gold"
+                              : "bg-chart-3"
+                        }`}
                       />
                     ))}
-                    {dayEvents.length > 3 && <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />}
+                    {dayEvents.length > 3 && (
+                      <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+                    )}
                   </div>
                 </div>
               );
@@ -181,23 +248,31 @@ function CalendarPage() {
               {format(selectedDate, "eeee d MMMM", { locale: fr })}
             </h3>
             <p className="text-xs text-muted-foreground">
-              {selectedDayEvents.length === 0 
-                ? "Aucun événement prévu" 
+              {selectedDayEvents.length === 0
+                ? "Aucun événement prévu"
                 : `${selectedDayEvents.length} événement(s) programmé(s)`}
             </p>
           </div>
 
           <div className="space-y-3 overflow-y-auto max-h-[500px] pr-1 scrollbar-thin">
             {selectedDayEvents.map((evt) => (
-              <div key={evt.id} className="bg-card p-4 rounded-xl border border-border relative overflow-hidden group hover:shadow-md transition-all">
-                <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${
-                    evt.type === 'visite' ? 'bg-primary' :
-                    evt.type === 'livraison' ? 'bg-gold' : 'bg-chart-3'
-                  }`} />
+              <div
+                key={evt.id}
+                className="bg-card p-4 rounded-xl border border-border relative overflow-hidden group hover:shadow-md transition-all"
+              >
+                <div
+                  className={`absolute left-0 top-0 bottom-0 w-1.5 ${
+                    evt.type === "visite"
+                      ? "bg-primary"
+                      : evt.type === "livraison"
+                        ? "bg-gold"
+                        : "bg-chart-3"
+                  }`}
+                />
                 <div className="pl-3">
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="font-bold text-sm">{evt.title}</h4>
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDeleteEvent(evt.id);
@@ -226,75 +301,78 @@ function CalendarPage() {
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/60 backdrop-blur-sm">
-          <div className="bg-card rounded-2xl border border-border shadow-2xl p-8 w-full max-w-md animate-scale-in">
-            <div className="flex items-center justify-between mb-8">
+          <div className="bg-card rounded-xl border border-border shadow-2xl p-4 w-full max-w-sm animate-scale-in">
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-xl font-bold text-foreground">Nouvel événement</h2>
-                <p className="text-sm text-muted-foreground mt-1">
+                <h2 className="text-base font-bold text-foreground">Nouvel événement</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
                   Planifié pour le {format(parseISO(newEvent.date), "d MMMM yyyy", { locale: fr })}
                 </p>
               </div>
-              <button onClick={() => setShowModal(false)} className="p-2 rounded-xl hover:bg-muted transition-colors">
-                <X className="h-5 w-5 text-muted-foreground" />
+              <button
+                onClick={() => setShowModal(false)}
+                className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+              >
+                <X className="h-4 w-4 text-muted-foreground" />
               </button>
             </div>
-            <div className="space-y-5">
-              <div className="grid gap-2">
-                <label className="text-sm font-semibold text-foreground">Date de l'événement</label>
+            <div className="space-y-3">
+              <div className="grid gap-1">
+                <label className="text-xs font-semibold text-foreground">Date de l'événement</label>
                 <input
                   type="date"
                   value={newEvent.date}
                   onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                  className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                 />
               </div>
-              <div className="grid gap-2">
-                <label className="text-sm font-semibold text-foreground">Titre</label>
+              <div className="grid gap-1">
+                <label className="text-xs font-semibold text-foreground">Titre</label>
                 <input
                   type="text"
                   value={newEvent.title}
                   onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
                   placeholder="Ex: Visite terrain Ahmed..."
-                  className="w-full px-4 py-3 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                  className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                 />
               </div>
-              <div className="grid gap-2">
-                <label className="text-sm font-semibold text-foreground">Type d'activité</label>
+              <div className="grid gap-1">
+                <label className="text-xs font-semibold text-foreground">Type d'activité</label>
                 <select
                   value={newEvent.type}
                   onChange={(e) => setNewEvent({ ...newEvent, type: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                  className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                 >
                   <option value="visite">🌿 Visite Terrain</option>
                   <option value="livraison">🚛 Livraison</option>
                   <option value="inspection">🔍 Inspection Qualité</option>
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <label className="text-sm font-semibold text-foreground">Heure</label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-1">
+                  <label className="text-xs font-semibold text-foreground">Heure</label>
                   <input
                     type="time"
                     value={newEvent.time}
                     onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                   />
                 </div>
-                <div className="grid gap-2">
-                  <label className="text-sm font-semibold text-foreground">Lieu</label>
+                <div className="grid gap-1">
+                  <label className="text-xs font-semibold text-foreground">Lieu</label>
                   <input
                     type="text"
                     value={newEvent.location}
                     onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
                     placeholder="Secteur, Usine..."
-                    className="w-full px-4 py-3 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                   />
                 </div>
               </div>
               <button
                 onClick={handleAddEvent}
                 disabled={!newEvent.title}
-                className="w-full rounded-xl bg-primary px-6 py-4 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+                className="w-full rounded-lg bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
               >
                 Planifier l'événement
               </button>
@@ -305,5 +383,3 @@ function CalendarPage() {
     </div>
   );
 }
-
-

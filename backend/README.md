@@ -28,18 +28,18 @@ Ce backend est construit avec Node.js, Express et MySQL.
       DB_USER=votre_utilisateur
       DB_PASSWORD=votre_mot_de_passe
       DB_NAME=cosumar_db
-      ```
+   ```
 
 ## Démarrage
 
 - Pour le développement (avec redémarrage automatique) :
   ```bash
    npm run dev
-   ```
+  ```
 - Pour la production :
   ```bash
    npm start
-   ```
+  ```
 
 ## Points de terminaison (Endpoints)
 
@@ -49,9 +49,10 @@ Ce backend est construit avec Node.js, Express et MySQL.
 ## Intégration ELK (Elasticsearch, Logstash, Kibana)
 
 Le backend est maintenant compatible avec la suite ELK :
+
 - **Format** : Les logs sont générés au format **JSON structuré**.
 - **Localisation** : Les fichiers de logs se trouvent dans `backend/logs/combined.log` et `backend/logs/error.log`.
 - **Configuration ELK** : Utilisez **Filebeat** pour lire ces fichiers JSON et les envoyer vers Logstash ou directement vers Elasticsearch.
 
-Le serveur API est configuré sur le port **5000**. 
+Le serveur API est configuré sur le port **5000**.
 L'interface utilisateur (frontend) est généralement sur le port **8080** ou **5173**.
