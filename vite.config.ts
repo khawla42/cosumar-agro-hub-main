@@ -11,6 +11,6 @@ export default defineConfig({
     server: {
       port: 8080,
     },
-    // base: "/cosumar-agro-hub-/", // Désactivé pour le développement local
+    base: "/cosumar-agro-hub-main/", // Pour GitHub Pages
   },
 });
